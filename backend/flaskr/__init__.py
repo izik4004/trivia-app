@@ -13,13 +13,8 @@ def create_app(test_config=None):
     app = Flask(__name__)
     setup_db(app)
 
-    """
-    @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
-    """
     cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
-    """
-    @TODO: Use the after_request decorator to set Access-Control-Allow
-    """
+
     def after_request(response):
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,true')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PATCH,POST,DELETE,OPTIONS')
@@ -34,11 +29,7 @@ def create_app(test_config=None):
         curr_page = page_data[start:end]
         return curr_page
     
-    """
-    @TODO:
-    Create an endpoint to handle GET requests
-    for all available categories.
-    """
+  
     @app.route('/categories', methods=['GET'])
     def categories():
         """Get all available categories"""
@@ -56,12 +47,7 @@ def create_app(test_config=None):
     
     @app.route('/questions', methods=['GET'])
     def questions():
-        """
-        GET: Paginated Questions
-        This endpoint return a list of questions paginated with every
-        10 questions, number of total questions, current category, categories.
-        """
-
+     
         get_questions = Question.query.all()
 
         current_page = pagination(request, get_questions)
@@ -100,8 +86,7 @@ def create_app(test_config=None):
 
     @app.route('/questions', methods=['POST'])
     def add_question():
-        """Populate the Question table with a new question"""
-
+    
         body = request.get_json()
 
         question = body.get('question', None)
@@ -133,7 +118,7 @@ def create_app(test_config=None):
 
     @app.route('/questions/search', methods=['POST'])
     def search():
-        """Search for questions with the search term"""
+        
         body = request.get_json()
 
         searchTerm = body.get('searchTerm', None)
@@ -172,7 +157,90 @@ def create_app(test_config=None):
             abort(422)
             
             
+    @app.route('/quizzes', methods=['POST'])
+    def quizzes():
+        body = request.get_json()
+
+        quiz_category = body.get('quiz_category', None)
+        previous_questions = body.get('previous_questions', None)
+
+        if previous_questions is None: abort(400)
+
+        try:
+            quest = Question.query.filter(Question.id.notin_(previous_questions))
+            question = None
+
+            if quiz_category and quiz_category['id']:
+                quest = quest.filter(Question.category == quiz_category['id'])
+
+            if quest.count():
+                question = quest[random.randint(0, quest.count() - 1)]
+                question = question.format()
+
+            return jsonify({
+                'success': True,
+                'question': question
+            })
+        except:
+            abort(500)  
    
+   
+   
+    @app.errorhandler(400)
+    def bad_request(error):
+        return (
+            jsonify({
+                'success': False,
+                'error': 400,
+                'message': 'bad request',
+            }),
+            400
+        )
+
+    @app.errorhandler(404)
+    def not_found(error):
+        return (
+            jsonify({
+                'success': False,
+                'error': 404,
+                'message': 'resource not found',
+            }),
+            404
+        )
+
+    @app.errorhandler(405)
+    def not_allowed(error):
+        return (
+            jsonify({
+                'success': False,
+                'error': 405,
+                'message': 'method not allowed',
+            }),
+            405
+        )
+
+    @app.errorhandler(422)
+    def unprocessable(error):
+        return (
+            jsonify({
+                'success': False,
+                'error': 422,
+                'message': 'unprocessable',
+            }),
+            422
+        )
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        return (
+            jsonify({
+                'success': False,
+                'error': 500,
+                'message': 'internal server error',
+            }),
+            500
+        )
+
 
     return app
 
